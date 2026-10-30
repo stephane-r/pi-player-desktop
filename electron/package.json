@@ -14,7 +14,8 @@
   "type": "module",
   "devDependencies": {
     "electron": "^45.1.0",
-    "electron-builder": "^26.18.0"
+    "electron-builder": "^26.18.0",
+    "electron-reloader": "^2.0.0"
   },
   "build": {
     "appId": "dev.piplayer.desktop",

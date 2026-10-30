@@ -5,6 +5,12 @@ import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { MpvPlayer } from './mpv-ipc.js';
 
+// Dev only : recharge le renderer (ou relance l'app si un fichier du main process change) à la
+// sauvegarde. Le try/catch est nécessaire : en production le paquet n'est pas installé.
+let reloader;
+try { reloader = await import('electron-reloader'); } catch { /* absent en prod, normal */ }
+reloader?.default(import.meta);
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 function resolveMpvPath() {
