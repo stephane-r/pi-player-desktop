@@ -125,6 +125,12 @@ function itemIconUrl(it) {
   return (currentTab === 'series' ? it.cover : it.stream_icon) || '';
 }
 
+function createSpinner() {
+  const span = document.createElement('span');
+  span.className = 'row-spinner';
+  return span;
+}
+
 function renderItemRow(el, it) {
   const wrapper = document.createElement('div');
   wrapper.className = 'item-row';
@@ -147,6 +153,7 @@ function renderItemRow(el, it) {
   label.className = 'item-label';
   label.textContent = (it.stream_type === 'radio_streams' ? '🎵 ' : '') + it.name;
   main.appendChild(label);
+  main.appendChild(createSpinner());
 
   const favBtn = document.createElement('button');
   favBtn.className = 'fav-btn' + (isFavorite(currentTab, it) ? ' active' : '');
@@ -345,7 +352,11 @@ function renderItems() {
     eps.forEach(ep => {
       const div = document.createElement('div');
       div.className = 'item';
-      div.textContent = `S${ep.season} E${ep.episode_num}${ep.title ? ' - ' + ep.title : ''}`;
+      const label = document.createElement('span');
+      label.className = 'item-label';
+      label.textContent = `S${ep.season} E${ep.episode_num}${ep.title ? ' - ' + ep.title : ''}`;
+      div.appendChild(label);
+      div.appendChild(createSpinner());
       div.onclick = () => playEpisode(ep, div);
       el.appendChild(div);
     });
@@ -448,6 +459,17 @@ function markActive(el) {
   if (el) el.classList.add('active');
 }
 
+// Petit spinner sur la ligne cliquée, le temps que mpv démarre (ou échoue) — couvre le délai
+// perceptible du premier lancement de mpv, avant que sa fenêtre ne prenne le relais visuellement.
+let loadingRowEl = null;
+function setRowLoading(el) {
+  // "row-loading", pas "loading" : cette dernière classe existe déjà pour les messages
+  // "Chargement..." (padding différent) et s'appliquait en même temps par coïncidence de nom.
+  loadingRowEl?.classList.remove('row-loading');
+  loadingRowEl = el || null;
+  loadingRowEl?.classList.add('row-loading');
+}
+
 function formatTime(seconds) {
   if (!Number.isFinite(seconds) || seconds < 0) seconds = 0;
   const m = Math.floor(seconds / 60);
@@ -538,12 +560,13 @@ function onSubtitleTrackChange() {
   window.player.setSubtitleTrack(value === '' ? null : Number(value));
 }
 
-async function startPlayback(url, label, myToken, kind) {
+async function startPlayback(url, label, myToken, kind, el) {
   const status = document.getElementById('now-playing');
   status.textContent = `Préparation du flux: ${label}...`;
   playerDuration = 0;
   document.getElementById('audio-track-select').innerHTML = '<option value="">Audio</option>';
   document.getElementById('sub-track-select').innerHTML = '<option value="">Sous-titres</option>';
+  setRowLoading(el);
 
   try {
     await window.player.load(url, kind);
@@ -551,30 +574,32 @@ async function startPlayback(url, label, myToken, kind) {
     if (myToken !== playToken) return;
     status.textContent = `Erreur de lecture (${label}): ${e.message}`;
     notify('Erreur de lecture', `${label} : ${e.message}`);
+    setRowLoading(null);
     return;
   }
   if (myToken !== playToken) { window.player.stop(); return; }
   status.textContent = `Lecture: ${label}`;
+  setRowLoading(null);
 }
 
 function playChannel(ch, el) {
   markActive(el);
   const url = `http://${state.host}/live/${state.user}/${state.pass}/${ch.stream_id}.m3u8`;
-  startPlayback(url, ch.name, ++playToken, 'live');
+  startPlayback(url, ch.name, ++playToken, 'live', el);
 }
 
 function playMovie(movie, el) {
   markActive(el);
   const ext = movie.container_extension || 'mp4';
   const url = `http://${state.host}/movie/${state.user}/${state.pass}/${movie.stream_id}.${ext}`;
-  startPlayback(url, movie.name, ++playToken, 'vod');
+  startPlayback(url, movie.name, ++playToken, 'vod', el);
 }
 
 function playEpisode(ep, el) {
   markActive(el);
   const ext = ep.container_extension || 'mp4';
   const url = `http://${state.host}/series/${state.user}/${state.pass}/${ep.id}.${ext}`;
-  startPlayback(url, `${openSeries.name} S${ep.season}E${ep.episode_num}`, ++playToken, 'vod');
+  startPlayback(url, `${openSeries.name} S${ep.season}E${ep.episode_num}`, ++playToken, 'vod', el);
 }
 
 // auto-login si des identifiants sont déjà sauvegardés

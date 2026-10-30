@@ -133,10 +133,30 @@
 
   /* Ligne nom+EPG (chaînes live) : toute la zone (nom + sous-ligne EPG) forme un seul bloc
      cliquable/survolable, d'où un conteneur .item-row séparé plutôt que de réutiliser .item. */
-  .item-row { cursor: pointer; border-bottom: 1px solid #222; }
+  .item-row { position: relative; cursor: pointer; border-bottom: 1px solid #222; }
   .item-row:hover { background: #2a2a2a; }
   .item-row.active { background: #3b82f6; color: #fff; }
   .item-row.active .item-epg { color: #cbd5e1; }
+  /* Spinner au clic : overlay en position absolute sur toute la ligne, pour ne pas décaler le
+     texte/les boutons à l'apparition (contrairement à un élément inline dans le flux). */
+  .row-spinner {
+    display: none;
+    position: absolute;
+    inset: 0;
+    align-items: center;
+    justify-content: center;
+  }
+  .row-spinner::after {
+    content: '';
+    width: 22px;
+    height: 22px;
+    border: 3px solid rgba(255, 255, 255, .3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: item-spin .6s linear infinite;
+  }
+  .item-row.row-loading .row-spinner, .item.row-loading .row-spinner { display: flex; }
+  @keyframes item-spin { to { transform: rotate(360deg); } }
   .item-row-main {
     padding: 10px 14px;
     font-size: 14px;
