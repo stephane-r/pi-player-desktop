@@ -112,11 +112,14 @@
   }
   #seek-bar { flex: 1; accent-color: #3b82f6; }
   #time-label { font-size: 12px; color: #aaa; min-width: 100px; text-align: right; }
-  #controls .select, #controls .select select { font-size: 12px; max-width: 140px; }
+  /* Largeur fixe (pas max-width) : un <select> se redimensionne sinon selon son contenu, ce qui
+     décalait la barre de contrôles à chaque reset des pistes au clic sur un nouveau contenu. */
+  #controls .select, #controls .select select { font-size: 12px; width: 140px; }
 
   #now-playing { padding: 10px; font-size: 14px; color: #aaa; background: #1c1c1c; }
 
   .item {
+    position: relative;
     padding: 10px 14px;
     cursor: pointer;
     border-bottom: 1px solid #222;
