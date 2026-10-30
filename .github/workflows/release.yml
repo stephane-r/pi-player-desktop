@@ -73,10 +73,15 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: piplayer-${{ matrix.os }}
+          # .yml (latest.yml / latest-mac.yml) et .zip (mac, requis par Squirrel.Mac) sont générés
+          # par electron-builder grâce à la config "publish" de package.json : electron-updater en
+          # a besoin pour savoir qu'une nouvelle version existe et où la télécharger.
           path: |
             electron/dist/*.dmg
+            electron/dist/*.zip
             electron/dist/*.exe
             electron/dist/*.blockmap
+            electron/dist/latest*.yml
           if-no-files-found: error
 
   release:

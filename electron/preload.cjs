@@ -2,6 +2,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('appInfo', {
   getVersion: () => ipcRenderer.invoke('app:get-version'),
+  onUpdateStatus: (cb) => ipcRenderer.on('app:update-status', (_e, payload) => cb(payload)),
+  installUpdate: () => ipcRenderer.invoke('app:install-update'),
 });
 
 contextBridge.exposeInMainWorld('player', {

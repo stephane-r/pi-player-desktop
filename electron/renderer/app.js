@@ -24,6 +24,47 @@ window.appInfo.getVersion().then((version) => {
   document.getElementById('app-version').textContent = `v${version}`;
 });
 
+// Statut de mise à jour (vérification/téléchargement) affiché à côté du numéro de version ;
+// "prêt à redémarrer" passe en plus par un toast avec action, pas juste du texte discret.
+window.appInfo.onUpdateStatus(({ state, version, percent }) => {
+  const statusEl = document.getElementById('update-status');
+  const labels = {
+    checking: 'Vérification des mises à jour…',
+    downloading: `Téléchargement de la mise à jour…${percent != null ? ` ${percent}%` : ''}`,
+    'up-to-date': '',
+    error: '',
+    ready: '',
+  };
+  statusEl.textContent = labels[state] ?? '';
+
+  if (state === 'ready') showUpdateReadyToast(version);
+});
+
+function showUpdateReadyToast(version) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'notification is-info';
+
+  const deleteBtn = document.createElement('button');
+  deleteBtn.className = 'delete';
+  deleteBtn.onclick = () => toast.remove();
+  toast.appendChild(deleteBtn);
+
+  const strong = document.createElement('strong');
+  strong.textContent = `Mise à jour v${version} prête`;
+  toast.append(strong, document.createElement('br'), document.createTextNode("Redémarre l'app pour l'appliquer."));
+
+  const restartBtn = document.createElement('button');
+  restartBtn.className = 'button is-small is-info';
+  restartBtn.style.marginTop = '8px';
+  restartBtn.textContent = 'Redémarrer maintenant';
+  restartBtn.onclick = () => window.appInfo.installUpdate();
+  toast.appendChild(document.createElement('br'));
+  toast.appendChild(restartBtn);
+
+  container.appendChild(toast);
+}
+
 // Xtream n'a pas de vraie sous-catégorie : les fournisseurs insèrent des "fausses chaînes"
 // décoratives (ex: "▼●★ --- |FR| TNT FHD |FR| --- ★●") comme séparateurs/en-têtes visuels.
 function isDivider(name) {

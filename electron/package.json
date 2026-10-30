@@ -6,8 +6,8 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "build:mac": "electron-builder --mac",
-    "build:win": "electron-builder --win"
+    "build:mac": "electron-builder --mac --publish=never",
+    "build:win": "electron-builder --win --publish=never"
   },
   "author": "",
   "license": "ISC",
@@ -30,12 +30,20 @@
       "renderer/**/*"
     ],
     "mac": {
-      "target": "dmg",
+      "target": ["dmg", "zip"],
       "category": "public.app-category.entertainment",
       "identity": null
     },
     "win": {
       "target": "nsis"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "stephane-r",
+      "repo": "pi-player-desktop"
     }
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11"
   }
 }

@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import { autoUpdater } from 'electron-updater';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { existsSync } from 'node:fs';
@@ -107,7 +108,32 @@ ipcMain.handle('player:stop', () => mpv?.command(['stop']));
 ipcMain.handle('player:set-audio-track', (_event, id) => mpv?.setAudioTrack(id));
 ipcMain.handle('player:set-subtitle-track', (_event, id) => mpv?.setSubtitleTrack(id));
 
-app.whenReady().then(createMainWindow);
+// Vérifie les Releases GitHub (publiées par .github/workflows/release.yml) au démarrage. Pas de
+// vérification périodique : une seule fois par lancement suffit pour cet usage. Rien en dev — il
+// n'y a pas de releases pour une build non empaquetée, et autoUpdater échouerait de toute façon.
+ipcMain.handle('app:install-update', () => autoUpdater.quitAndInstall());
+
+function setupAutoUpdater() {
+  if (!app.isPackaged) return;
+  const sendStatus = (payload) => mainWindow?.webContents.send('app:update-status', payload);
+
+  autoUpdater.on('checking-for-update', () => sendStatus({ state: 'checking' }));
+  autoUpdater.on('update-available', (info) => sendStatus({ state: 'downloading', version: info.version, percent: 0 }));
+  autoUpdater.on('update-not-available', () => sendStatus({ state: 'up-to-date' }));
+  autoUpdater.on('download-progress', (p) => sendStatus({ state: 'downloading', percent: Math.round(p.percent) }));
+  autoUpdater.on('update-downloaded', (info) => sendStatus({ state: 'ready', version: info.version }));
+  autoUpdater.on('error', (err) => {
+    console.error('[autoUpdater]', err);
+    sendStatus({ state: 'error' });
+  });
+
+  autoUpdater.checkForUpdates().catch((err) => console.error('[autoUpdater] échec de vérification', err));
+}
+
+app.whenReady().then(() => {
+  createMainWindow();
+  setupAutoUpdater();
+});
 
 app.on('window-all-closed', () => {
   mpv?.destroy();
