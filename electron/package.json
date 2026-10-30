@@ -1,6 +1,6 @@
 {
   "name": "piplayer-desktop",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Client IPTV de bureau (Electron + mpv en fenêtre séparée)",
   "main": "main.js",
   "private": true,
@@ -30,7 +30,10 @@
       "renderer/**/*"
     ],
     "mac": {
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "category": "public.app-category.entertainment",
       "identity": null
     },
