@@ -69,8 +69,8 @@
     border-right: 1px solid #333;
   }
   #channels {
-    width: 300px;
-    border-right: 1px solid #333;
+    flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -79,27 +79,6 @@
     flex: 1;
     overflow-y: auto;
     min-height: 0;
-  }
-  #player-pane {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    background: #000;
-    min-width: 0;
-  }
-  /* La vidéo s'ouvre dans sa propre fenêtre mpv (barre de titre, redimensionnable, plein écran
-     natif) : cette zone ne sert qu'à afficher les contrôles et le statut de lecture. */
-  #video-surface {
-    flex: 1;
-    background: #000;
-    min-height: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #666;
-    font-size: 13px;
-    text-align: center;
-    padding: 20px;
   }
 
   #controls {
@@ -271,24 +250,21 @@
         <input id="search" placeholder="Rechercher..." oninput="renderItems()">
         <div id="channel-list"></div>
       </div>
-      <div id="player-pane">
-        <div id="video-surface">La vidéo s'ouvre dans une fenêtre mpv séparée.</div>
-        <div id="controls">
-          <button id="btn-playpause" class="button is-small" onclick="togglePause()">⏸</button>
-          <input id="seek-bar" type="range" min="0" max="1000" value="0" oninput="onSeekBarInput()">
-          <span id="time-label">00:00 / 00:00</span>
-          <span style="font-size:14px;">🔊</span>
-          <input id="volume-slider" type="range" min="0" max="100" value="100" oninput="onVolumeChange()" style="width:80px; accent-color:#3b82f6;">
-          <div class="select is-small">
-            <select id="audio-track-select" onchange="onAudioTrackChange()"><option value="">Audio</option></select>
-          </div>
-          <div class="select is-small">
-            <select id="sub-track-select" onchange="onSubtitleTrackChange()"><option value="">Sous-titres</option></select>
-          </div>
-        </div>
-        <div id="now-playing">Sélectionne un contenu</div>
+    </div>
+    <div id="controls">
+      <button id="btn-playpause" class="button is-small" onclick="togglePause()">⏸</button>
+      <input id="seek-bar" type="range" min="0" max="1000" value="0" oninput="onSeekBarInput()">
+      <span id="time-label">00:00 / 00:00</span>
+      <span style="font-size:14px;">🔊</span>
+      <input id="volume-slider" type="range" min="0" max="100" value="100" oninput="onVolumeChange()" style="width:80px; accent-color:#3b82f6;">
+      <div class="select is-small">
+        <select id="audio-track-select" onchange="onAudioTrackChange()"><option value="">Audio</option></select>
+      </div>
+      <div class="select is-small">
+        <select id="sub-track-select" onchange="onSubtitleTrackChange()"><option value="">Sous-titres</option></select>
       </div>
     </div>
+    <div id="now-playing">Sélectionne un contenu</div>
   </div>
 
 <script src="app.js"></script>
