@@ -1,6 +1,10 @@
 const state = { host: '', user: '', pass: '' };
+// La radio n'existe pas comme action Xtream séparée : ce sont des streams "live" avec
+// stream_type === "radio_streams", qu'on extrait après coup (voir switchTab) pour en faire un
+// onglet à part plutôt que de les laisser noyés dans la liste des chaînes TV.
 const content = {
   live:   { categories: [], items: [], loaded: false, selectedCat: null },
+  radio:  { categories: [], items: [], loaded: false, selectedCat: null },
   vod:    { categories: [], items: [], loaded: false, selectedCat: null },
   series: { categories: [], items: [], loaded: false, selectedCat: null }
 };
@@ -169,7 +173,7 @@ function renderItemRow(el, it) {
   wrapper.appendChild(main);
 
   wrapper.onclick = () => {
-    if (currentTab === 'live') playChannel(it, wrapper);
+    if (currentTab === 'live' || currentTab === 'radio') playChannel(it, wrapper);
     else if (currentTab === 'vod') playMovie(it, wrapper);
     else openSeriesHandler(it, wrapper);
   };
@@ -260,15 +264,29 @@ async function switchTab(tab) {
   openSeries = null;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
 
-  if (!content[tab].loaded) {
+  const fetchTab = tab === 'radio' ? 'live' : tab; // la radio se déduit du fetch "live"
+  if (!content[fetchTab].loaded) {
     document.getElementById('categories').innerHTML = '<div class="loading">Chargement...</div>';
     document.getElementById('now-playing').textContent = 'Chargement du contenu...';
-    const [catAction, itemAction] = TAB_ACTIONS[tab];
+    const [catAction, itemAction] = TAB_ACTIONS[fetchTab];
     try {
       const [cats, items] = await Promise.all([api(catAction), api(itemAction)]);
-      content[tab].categories = Array.isArray(cats) ? cats : [];
-      content[tab].items = Array.isArray(items) ? items : [];
-      content[tab].loaded = true;
+      const allCats = Array.isArray(cats) ? cats : [];
+      const allItems = Array.isArray(items) ? items : [];
+      if (fetchTab === 'live') {
+        // Mêmes catégories des deux côtés : renderCategories() masque déjà celles à 0 élément,
+        // donc une catégorie purement radio disparaît naturellement de l'onglet TV, et vice-versa.
+        content.live.items = allItems.filter(it => it.stream_type !== 'radio_streams');
+        content.radio.items = allItems.filter(it => it.stream_type === 'radio_streams');
+        content.live.categories = allCats;
+        content.radio.categories = allCats;
+        content.live.loaded = true;
+        content.radio.loaded = true;
+      } else {
+        content[fetchTab].categories = allCats;
+        content[fetchTab].items = allItems;
+        content[fetchTab].loaded = true;
+      }
       document.getElementById('now-playing').textContent = 'Sélectionne un contenu';
     } catch (e) {
       document.getElementById('categories').innerHTML = '';
