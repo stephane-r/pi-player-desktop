@@ -14,11 +14,14 @@ const TAB_ACTIONS = {
   series: ['get_series_categories', 'get_series']
 };
 const FAVORITES_CAT_ID = '__favorites__';
+const HISTORY_CAT_ID = '__history__';
 let currentTab = 'live';
 let openSeries = null;
 let seriesEpisodes = [];
 let expandedGroups = new Set();
 let playToken = 0;
+let currentPlayback = null; // { url, label, kind, tab, key, iconUrl, el } du contenu en cours
+let lastHistorySaveAt = 0;
 
 window.appInfo.getVersion().then((version) => {
   document.getElementById('app-version').textContent = `v${version}`;
@@ -111,6 +114,29 @@ function toggleFavorite(tab, it) {
   if (idx === -1) list.push(key); else list.splice(idx, 1);
   favs[tab] = list;
   saveFavorites(favs);
+}
+
+// --- Historique (récemment regardé/écouté + reprise de lecture, persisté en local) ---
+// "kind" (pas "tab") détermine si une reprise a du sens : les flux live/radio n'ont pas de position
+// à reprendre, seule la VOD (films + épisodes) en garde une.
+const HISTORY_MAX = 20;
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem('iptv_history') || '[]'); } catch { return []; }
+}
+function saveHistory(list) {
+  localStorage.setItem('iptv_history', JSON.stringify(list));
+}
+function recordHistoryEntry({ key, tab, kind, label, url, iconUrl }, position, duration) {
+  const list = loadHistory().filter(h => h.key !== key);
+  list.unshift({ key, tab, kind, label, url, iconUrl, position, duration, updatedAt: Date.now() });
+  saveHistory(list.slice(0, HISTORY_MAX));
+}
+// En dessous de 15s restantes, on considère que c'est terminé : on repart du début plutôt que de
+// proposer de "reprendre" les 10 dernières secondes d'un film déjà fini.
+function historyResumeSeconds(key) {
+  const entry = loadHistory().find(h => h.key === key);
+  if (!entry || !entry.duration || entry.duration - entry.position < 15) return 0;
+  return entry.position > 5 ? entry.position : 0;
 }
 
 // --- EPG (programme en cours / à suivre, chaînes live uniquement) ---
@@ -231,11 +257,55 @@ function renderItemRow(el, it) {
   el.appendChild(wrapper);
 }
 
+function renderHistoryRow(el, entry) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'item-row';
+
+  const main = document.createElement('div');
+  main.className = 'item-row-main';
+
+  if (entry.iconUrl) {
+    const icon = document.createElement('img');
+    icon.className = 'item-icon';
+    icon.src = entry.iconUrl;
+    icon.loading = 'lazy';
+    icon.alt = '';
+    icon.onerror = () => icon.remove();
+    main.appendChild(icon);
+  }
+
+  const label = document.createElement('span');
+  label.className = 'item-label';
+  label.textContent = entry.label;
+  main.appendChild(label);
+  main.appendChild(createSpinner());
+  wrapper.appendChild(main);
+
+  if (entry.kind === 'vod' && entry.duration > 0) {
+    const progress = document.createElement('div');
+    progress.className = 'item-epg';
+    const finished = entry.duration - entry.position < 15;
+    progress.textContent = finished ? 'Terminé' : `Repris à ${formatTime(entry.position)} / ${formatTime(entry.duration)}`;
+    wrapper.appendChild(progress);
+  }
+
+  wrapper.onclick = () => {
+    markActive(wrapper);
+    startPlayback({
+      url: entry.url, label: entry.label, kind: entry.kind, tab: entry.tab,
+      key: entry.key, iconUrl: entry.iconUrl, el: wrapper,
+      resumeSeconds: historyResumeSeconds(entry.key),
+    });
+  };
+
+  el.appendChild(wrapper);
+}
+
 // Notification in-app (toast), utile quand l'utilisateur regarde la fenêtre mpv (séparée) plutôt
 // que le catalogue au moment où l'erreur survient. Bulma fournit le style (.notification), pas le
 // comportement (empilement, fermeture, auto-disparition), qu'on gère nous-mêmes.
 const TOAST_DURATION_MS = 8000;
-function notify(title, body) {
+function notify(title, body, retry) {
   const container = document.getElementById('toast-container');
   const toast = document.createElement('div');
   toast.className = 'notification is-danger';
@@ -249,8 +319,19 @@ function notify(title, body) {
   strong.textContent = title;
   toast.append(strong, document.createElement('br'), document.createTextNode(body));
 
+  if (retry) {
+    const retryBtn = document.createElement('button');
+    retryBtn.className = 'button is-small is-light';
+    retryBtn.style.marginTop = '8px';
+    retryBtn.textContent = 'Réessayer';
+    retryBtn.onclick = () => { toast.remove(); retry(); };
+    toast.append(document.createElement('br'), retryBtn);
+  }
+
   container.appendChild(toast);
-  setTimeout(() => toast.remove(), TOAST_DURATION_MS);
+  // Avec un bouton d'action, on laisse l'utilisateur fermer lui-même plutôt que de le faire
+  // disparaître avant qu'il ait eu le temps de cliquer dessus.
+  if (!retry) setTimeout(() => toast.remove(), TOAST_DURATION_MS);
 }
 
 function api(action, extra) {
@@ -387,6 +468,13 @@ function renderCategories() {
   favDiv.onclick = () => selectCategory(FAVORITES_CAT_ID, favDiv);
   el.appendChild(favDiv);
 
+  const histCount = loadHistory().filter(h => h.tab === currentTab).length;
+  const histDiv = document.createElement('div');
+  histDiv.className = 'item' + (selectedCat === HISTORY_CAT_ID ? ' active' : '');
+  histDiv.textContent = `🕘 Récemment regardé (${histCount})`;
+  histDiv.onclick = () => selectCategory(HISTORY_CAT_ID, histDiv);
+  el.appendChild(histDiv);
+
   categories.forEach(cat => {
     const count = items.filter(c => c.category_id === cat.category_id).length;
     if (count === 0) return;
@@ -453,6 +541,21 @@ function renderItems() {
       return;
     }
     list.forEach(it => renderItemRow(el, it));
+    return;
+  }
+
+  // Historique : liste plate, toutes catégories confondues, la plus récente en premier.
+  if (selectedCat === HISTORY_CAT_ID) {
+    let hist = loadHistory().filter(h => h.tab === currentTab);
+    if (query) hist = hist.filter(h => (h.label || '').toLowerCase().includes(query));
+    if (hist.length === 0) {
+      const note = document.createElement('div');
+      note.className = 'loading';
+      note.textContent = 'Rien dans l\'historique pour cet onglet.';
+      el.appendChild(note);
+      return;
+    }
+    hist.forEach(h => renderHistoryRow(el, h));
     return;
   }
 
@@ -569,6 +672,14 @@ window.player.onState(({ name, value }) => {
     bar.value = playerDuration > 0 ? String(Math.round((value / playerDuration) * 1000)) : '0';
     document.getElementById('time-label').textContent = `${formatTime(value)} / ${formatTime(playerDuration)}`;
   }
+  // Sauvegarde périodique de la position pour la reprise de lecture (VOD uniquement, un live n'a
+  // pas de position à reprendre). Limité à une écriture toutes les 5s, pas la peine de persister à
+  // chaque tick.
+  if (name === 'time-pos' && typeof value === 'number' && currentPlayback?.kind === 'vod'
+    && playerDuration > 0 && Date.now() - lastHistorySaveAt > 5000) {
+    lastHistorySaveAt = Date.now();
+    recordHistoryEntry(currentPlayback, value, playerDuration);
+  }
   if (name === 'pause' && typeof value === 'boolean') {
     playerPaused = value;
     document.getElementById('btn-playpause').textContent = value ? '▶' : '⏸';
@@ -613,7 +724,9 @@ window.player.onEnded(() => {
 
 window.player.onError((message) => {
   document.getElementById('now-playing').textContent = `Erreur de lecture: ${message}`;
-  notify('Erreur de lecture', message);
+  // Couvre aussi les erreurs qui surviennent en cours de lecture (ex: coupure réseau, 503 côté
+  // flux), pas seulement l'échec initial — currentPlayback garde le contexte du contenu en cours.
+  notify('Erreur de lecture', message, currentPlayback ? () => startPlayback({ ...currentPlayback }) : undefined);
 });
 
 window.player.onLog((line) => console.log('[mpv]', line));
@@ -690,7 +803,8 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-async function startPlayback(url, label, myToken, kind, el) {
+async function startPlayback({ url, label, kind, tab, key, iconUrl, el, resumeSeconds = 0 }) {
+  const myToken = ++playToken;
   const status = document.getElementById('now-playing');
   status.textContent = `Préparation du flux: ${label}...`;
   playerDuration = 0;
@@ -703,33 +817,42 @@ async function startPlayback(url, label, myToken, kind, el) {
   } catch (e) {
     if (myToken !== playToken) return;
     status.textContent = `Erreur de lecture (${label}): ${e.message}`;
-    notify('Erreur de lecture', `${label} : ${e.message}`);
+    notify('Erreur de lecture', `${label} : ${e.message}`, () => startPlayback({ url, label, kind, tab, key, iconUrl, el, resumeSeconds }));
     setRowLoading(null);
     return;
   }
   if (myToken !== playToken) { window.player.stop(); return; }
-  status.textContent = `Lecture: ${label}`;
+
+  if (resumeSeconds > 0) window.player.seek(resumeSeconds);
+  currentPlayback = { url, label, kind, tab, key, iconUrl, el };
+  recordHistoryEntry(currentPlayback, resumeSeconds, 0);
+  if (tab === currentTab) renderCategories(); // met à jour le compteur "Récemment regardé" tout de suite
+
+  status.textContent = resumeSeconds > 0 ? `Lecture: ${label} (reprise à ${formatTime(resumeSeconds)})` : `Lecture: ${label}`;
   setRowLoading(null);
 }
 
 function playChannel(ch, el) {
   markActive(el);
   const url = `http://${state.host}/live/${state.user}/${state.pass}/${ch.stream_id}.m3u8`;
-  startPlayback(url, ch.name, ++playToken, 'live', el);
+  startPlayback({ url, label: ch.name, kind: 'live', tab: currentTab, key: `${currentTab}:${ch.stream_id}`, iconUrl: itemIconUrl(ch), el });
 }
 
 function playMovie(movie, el) {
   markActive(el);
+  const key = `vod:${movie.stream_id}`;
   const ext = movie.container_extension || 'mp4';
   const url = `http://${state.host}/movie/${state.user}/${state.pass}/${movie.stream_id}.${ext}`;
-  startPlayback(url, movie.name, ++playToken, 'vod', el);
+  startPlayback({ url, label: movie.name, kind: 'vod', tab: 'vod', key, iconUrl: itemIconUrl(movie), el, resumeSeconds: historyResumeSeconds(key) });
 }
 
 function playEpisode(ep, el) {
   markActive(el);
+  const key = `episode:${ep.id}`;
   const ext = ep.container_extension || 'mp4';
+  const label = `${openSeries.name} S${ep.season}E${ep.episode_num}`;
   const url = `http://${state.host}/series/${state.user}/${state.pass}/${ep.id}.${ext}`;
-  startPlayback(url, `${openSeries.name} S${ep.season}E${ep.episode_num}`, ++playToken, 'vod', el);
+  startPlayback({ url, label, kind: 'vod', tab: 'series', key, iconUrl: openSeries.cover, el, resumeSeconds: historyResumeSeconds(key) });
 }
 
 // auto-login si des identifiants sont déjà sauvegardés
