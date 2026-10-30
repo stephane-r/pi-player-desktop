@@ -217,10 +217,12 @@
 
   <div id="login" class="box">
     <h1 class="title is-5">Connexion IPTV</h1>
-    <input id="f-host" class="input" placeholder="Host (ex: smart.200300.org:8080)" value="smart.200300.org:8080">
-    <input id="f-user" class="input" placeholder="Username">
-    <input id="f-pass" class="input" placeholder="Password" type="password">
-    <button class="button is-primary is-fullwidth" onclick="connect()">Se connecter</button>
+    <form onsubmit="connect(); return false;">
+      <input id="f-host" class="input" placeholder="Host (ex: smart.200300.org:8080)" value="smart.200300.org:8080">
+      <input id="f-user" class="input" placeholder="Username">
+      <input id="f-pass" class="input" placeholder="Password" type="password">
+      <button type="submit" class="button is-primary is-fullwidth">Se connecter</button>
+    </form>
     <div class="error" id="login-error"></div>
   </div>
 
