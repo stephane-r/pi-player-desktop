@@ -45,6 +45,13 @@ function createMainWindow() {
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   if (!app.isPackaged) mainWindow.webContents.openDevTools({ mode: 'detach' });
 
+  // Empêche le <title> de la page d'écraser le titre : on y ajoute "(dev)" en développement pour
+  // distinguer la fenêtre d'une build release installée en parallèle.
+  mainWindow.on('page-title-updated', (event) => {
+    event.preventDefault();
+    mainWindow.setTitle(app.isPackaged ? 'P.I Player Desktop' : 'P.I Player Desktop (dev)');
+  });
+
   mainWindow.on('closed', () => {
     mpv?.destroy();
     mpv = null;
@@ -69,7 +76,7 @@ async function ensureMpv() {
     if (err.code === 'ENOENT') {
       dialog.showErrorBox(
         'mpv introuvable',
-        "PiPlayer a besoin de mpv pour lire les flux. Installe-le (par ex. `brew install mpv` sur macOS, ou depuis mpv.io sur Windows) puis relance l'application."
+        "P.I Player Desktop a besoin de mpv pour lire les flux. Installe-le (par ex. `brew install mpv` sur macOS, ou depuis mpv.io sur Windows) puis relance l'application."
       );
       mpv = null;
       return;

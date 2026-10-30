@@ -19,7 +19,7 @@
   },
   "build": {
     "appId": "dev.piplayer.desktop",
-    "productName": "PiPlayer",
+    "productName": "P.I Player Desktop",
     "directories": {
       "output": "dist"
     },
