@@ -33,8 +33,10 @@ let mpv = null;
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 800,
+    width: 960,
+    height: 640,
+    minWidth: 760,
+    minHeight: 480,
     backgroundColor: '#111111',
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
