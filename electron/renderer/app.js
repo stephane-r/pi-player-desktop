@@ -121,12 +121,27 @@ async function renderEpgInto(epgEl, streamId) {
   }
 }
 
+function itemIconUrl(it) {
+  return (currentTab === 'series' ? it.cover : it.stream_icon) || '';
+}
+
 function renderItemRow(el, it) {
   const wrapper = document.createElement('div');
   wrapper.className = 'item-row';
 
   const main = document.createElement('div');
   main.className = 'item-row-main';
+
+  const iconUrl = itemIconUrl(it);
+  if (iconUrl) {
+    const icon = document.createElement('img');
+    icon.className = 'item-icon';
+    icon.src = iconUrl;
+    icon.loading = 'lazy';
+    icon.alt = '';
+    icon.onerror = () => icon.remove(); // logo cassé/injoignable : on retombe sur le texte seul
+    main.appendChild(icon);
+  }
 
   const label = document.createElement('span');
   label.className = 'item-label';
