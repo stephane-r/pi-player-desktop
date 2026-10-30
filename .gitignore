@@ -1,0 +1,7 @@
+node_modules/
+electron/dist/
+.DS_Store
+
+# Matériel de reverse engineering gardé localement pour référence, pas destiné au repo (lourd).
+/PiPlayer(4.0).apk
+/PiPlayer(4.0)-decompiled/

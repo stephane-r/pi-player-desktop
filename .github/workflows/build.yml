@@ -1,0 +1,49 @@
+name: Build desktop app
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            build-script: build:mac
+          - os: windows-latest
+            build-script: build:win
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: electron
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: electron/package-lock.json
+
+      - run: npm ci
+
+      - run: npm run ${{ matrix.build-script }}
+        env:
+          # Pas de certificat de signature pour l'instant : on le désactive explicitement pour que
+          # electron-builder n'essaie pas (et n'échoue pas) d'en chercher un en CI.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: piplayer-${{ matrix.os }}
+          path: |
+            electron/dist/*.dmg
+            electron/dist/*.exe
+            electron/dist/*.blockmap
+          if-no-files-found: error
