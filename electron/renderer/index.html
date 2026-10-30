@@ -277,6 +277,8 @@
           <button id="btn-playpause" class="button is-small" onclick="togglePause()">⏸</button>
           <input id="seek-bar" type="range" min="0" max="1000" value="0" oninput="onSeekBarInput()">
           <span id="time-label">00:00 / 00:00</span>
+          <span style="font-size:14px;">🔊</span>
+          <input id="volume-slider" type="range" min="0" max="100" value="100" oninput="onVolumeChange()" style="width:80px; accent-color:#3b82f6;">
           <div class="select is-small">
             <select id="audio-track-select" onchange="onAudioTrackChange()"><option value="">Audio</option></select>
           </div>

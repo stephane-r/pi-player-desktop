@@ -67,6 +67,7 @@ export class MpvPlayer extends EventEmitter {
     await this.observeProperty('time-pos');
     await this.observeProperty('duration');
     await this.observeProperty('pause');
+    await this.observeProperty('volume');
     this.on('mpv-event', (event, raw) => {
       if (event === 'file-loaded') this.#refreshTracks();
       if (event === 'end-file') {
@@ -170,6 +171,7 @@ export class MpvPlayer extends EventEmitter {
   }
   seek(seconds) { return this.command(['seek', seconds, 'absolute']); }
   setPause(paused) { return this.setProperty('pause', paused); }
+  setVolume(volume) { return this.setProperty('volume', volume); }
   setAudioTrack(id) { return this.setProperty('aid', id); }
   setSubtitleTrack(id) { return this.setProperty('sid', id ?? 'no'); }
 

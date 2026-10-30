@@ -90,7 +90,7 @@ async function ensureMpv() {
     mpv = null;
   });
   mpv.on('property-change', (name, value) => {
-    if (name === 'time-pos' || name === 'duration' || name === 'pause') {
+    if (name === 'time-pos' || name === 'duration' || name === 'pause' || name === 'volume') {
       mainWindow?.webContents.send('player:state', { name, value });
     }
   });
@@ -114,6 +114,7 @@ ipcMain.handle('player:seek', (_event, seconds) => mpv?.seek(seconds));
 ipcMain.handle('player:stop', () => mpv?.command(['stop']));
 ipcMain.handle('player:set-audio-track', (_event, id) => mpv?.setAudioTrack(id));
 ipcMain.handle('player:set-subtitle-track', (_event, id) => mpv?.setSubtitleTrack(id));
+ipcMain.handle('player:set-volume', (_event, volume) => mpv?.setVolume(volume));
 
 // Vérifie les Releases GitHub (publiées par .github/workflows/release.yml) au démarrage. Pas de
 // vérification périodique : une seule fois par lancement suffit pour cet usage. Rien en dev — il

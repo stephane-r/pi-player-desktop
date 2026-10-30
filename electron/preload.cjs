@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('player', {
   stop: () => ipcRenderer.invoke('player:stop'),
   setAudioTrack: (id) => ipcRenderer.invoke('player:set-audio-track', id),
   setSubtitleTrack: (id) => ipcRenderer.invoke('player:set-subtitle-track', id),
+  setVolume: (volume) => ipcRenderer.invoke('player:set-volume', volume),
 
   onState: (cb) => ipcRenderer.on('player:state', (_e, payload) => cb(payload)),
   onLog: (cb) => ipcRenderer.on('player:log', (_e, line) => cb(line)),

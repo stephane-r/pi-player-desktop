@@ -557,6 +557,8 @@ let playerDuration = 0;
 let playerPaused = false;
 let seekBarDragging = false;
 let seekBarReleaseTimer = null;
+let volumeSliderDragging = false;
+let volumeSliderReleaseTimer = null;
 
 window.player.onState(({ name, value }) => {
   if (name === 'duration' && typeof value === 'number') {
@@ -570,6 +572,11 @@ window.player.onState(({ name, value }) => {
   if (name === 'pause' && typeof value === 'boolean') {
     playerPaused = value;
     document.getElementById('btn-playpause').textContent = value ? '▶' : '⏸';
+  }
+  // Reflète aussi un changement de volume fait directement dans la fenêtre mpv (raccourcis clavier
+  // mpv 9/0/molette), pas seulement ceux déclenchés depuis notre propre slider.
+  if (name === 'volume' && typeof value === 'number' && !volumeSliderDragging) {
+    document.getElementById('volume-slider').value = String(Math.round(value));
   }
 });
 
@@ -634,6 +641,13 @@ function onAudioTrackChange() {
 function onSubtitleTrackChange() {
   const value = document.getElementById('sub-track-select').value;
   window.player.setSubtitleTrack(value === '' ? null : Number(value));
+}
+
+function onVolumeChange() {
+  volumeSliderDragging = true;
+  window.player.setVolume(Number(document.getElementById('volume-slider').value));
+  clearTimeout(volumeSliderReleaseTimer);
+  volumeSliderReleaseTimer = setTimeout(() => { volumeSliderDragging = false; }, 300);
 }
 
 async function startPlayback(url, label, myToken, kind, el) {
