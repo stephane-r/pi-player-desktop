@@ -186,10 +186,26 @@ function renderItemRow(el, it) {
   el.appendChild(wrapper);
 }
 
-// Notification système (en plus du texte affiché dans l'UI) : utile quand l'utilisateur regarde
-// la fenêtre mpv (séparée) plutôt que le catalogue au moment où l'erreur survient.
+// Notification in-app (toast), utile quand l'utilisateur regarde la fenêtre mpv (séparée) plutôt
+// que le catalogue au moment où l'erreur survient. Bulma fournit le style (.notification), pas le
+// comportement (empilement, fermeture, auto-disparition), qu'on gère nous-mêmes.
+const TOAST_DURATION_MS = 8000;
 function notify(title, body) {
-  try { new Notification(title, { body }); } catch { /* notifications indisponibles, tant pis */ }
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'notification is-danger';
+
+  const deleteBtn = document.createElement('button');
+  deleteBtn.className = 'delete';
+  deleteBtn.onclick = () => toast.remove();
+  toast.appendChild(deleteBtn);
+
+  const strong = document.createElement('strong');
+  strong.textContent = title;
+  toast.append(strong, document.createElement('br'), document.createTextNode(body));
+
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), TOAST_DURATION_MS);
 }
 
 function api(action, extra) {
