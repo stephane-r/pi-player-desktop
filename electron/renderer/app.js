@@ -399,17 +399,18 @@ function renderItems() {
 
   let list = selectedCat ? items.filter(c => c.category_id === selectedCat) : items;
 
-  // Recherche active, ou vue "Toutes" (plusieurs catégories mélangées) : liste plate, pas de sous-groupes.
-  if (query || !selectedCat) {
-    if (query) {
-      list = list.filter(c => !isDivider(c.name) && (c.name || '').toLowerCase().includes(query));
-    } else {
-      const note = document.createElement('div');
-      note.className = 'loading';
-      note.textContent = 'Sélectionne une catégorie pour voir ses sous-catégories.';
-      el.appendChild(note);
-      list = list.filter(c => !isDivider(c.name));
-    }
+  // Aucune catégorie sélectionnée (et pas de recherche) : juste le message, aucun item affiché.
+  if (!selectedCat && !query) {
+    const note = document.createElement('div');
+    note.className = 'loading';
+    note.textContent = 'Sélectionne une catégorie pour voir ses sous-catégories.';
+    el.appendChild(note);
+    return;
+  }
+
+  // Recherche active : liste plate sur toutes les catégories, pas de sous-groupes.
+  if (query) {
+    list = list.filter(c => !isDivider(c.name) && (c.name || '').toLowerCase().includes(query));
     list.slice(0, 500).forEach(it => renderItemRow(el, it));
     return;
   }
