@@ -650,6 +650,46 @@ function onVolumeChange() {
   volumeSliderReleaseTimer = setTimeout(() => { volumeSliderDragging = false; }, 300);
 }
 
+function changeVolume(delta) {
+  const slider = document.getElementById('volume-slider');
+  const next = Math.max(0, Math.min(100, Number(slider.value) + delta));
+  slider.value = String(next);
+  window.player.setVolume(next);
+}
+
+// --- Raccourcis clavier (espace = pause, flèches = seek/volume) ---
+// Désactivés tant qu'on n'est pas connecté, et ignorés si un champ texte/select a le focus (sinon
+// "espace" dans le champ de recherche ou un <select> de piste deviendrait inutilisable).
+document.addEventListener('keydown', (e) => {
+  if (document.getElementById('app').style.display !== 'flex') return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const tag = document.activeElement?.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+  switch (e.key) {
+    case ' ':
+      e.preventDefault();
+      togglePause();
+      break;
+    case 'ArrowLeft':
+      e.preventDefault();
+      window.player.seekRelative(-10);
+      break;
+    case 'ArrowRight':
+      e.preventDefault();
+      window.player.seekRelative(10);
+      break;
+    case 'ArrowUp':
+      e.preventDefault();
+      changeVolume(5);
+      break;
+    case 'ArrowDown':
+      e.preventDefault();
+      changeVolume(-5);
+      break;
+  }
+});
+
 async function startPlayback(url, label, myToken, kind, el) {
   const status = document.getElementById('now-playing');
   status.textContent = `Préparation du flux: ${label}...`;

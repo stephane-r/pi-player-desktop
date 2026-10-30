@@ -170,6 +170,7 @@ export class MpvPlayer extends EventEmitter {
     return this.command(['loadfile', url, 'replace']);
   }
   seek(seconds) { return this.command(['seek', seconds, 'absolute']); }
+  seekRelative(seconds) { return this.command(['seek', seconds, 'relative']); }
   setPause(paused) { return this.setProperty('pause', paused); }
   setVolume(volume) { return this.setProperty('volume', volume); }
   setAudioTrack(id) { return this.setProperty('aid', id); }

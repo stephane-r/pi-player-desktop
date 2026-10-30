@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('player', {
   pause: () => ipcRenderer.invoke('player:pause'),
   resume: () => ipcRenderer.invoke('player:resume'),
   seek: (seconds) => ipcRenderer.invoke('player:seek', seconds),
+  seekRelative: (seconds) => ipcRenderer.invoke('player:seek-relative', seconds),
   stop: () => ipcRenderer.invoke('player:stop'),
   setAudioTrack: (id) => ipcRenderer.invoke('player:set-audio-track', id),
   setSubtitleTrack: (id) => ipcRenderer.invoke('player:set-subtitle-track', id),

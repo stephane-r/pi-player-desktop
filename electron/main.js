@@ -114,6 +114,7 @@ ipcMain.handle('player:load', async (_event, { url, kind }) => {
 ipcMain.handle('player:pause', () => mpv?.setPause(true));
 ipcMain.handle('player:resume', () => mpv?.setPause(false));
 ipcMain.handle('player:seek', (_event, seconds) => mpv?.seek(seconds));
+ipcMain.handle('player:seek-relative', (_event, seconds) => mpv?.seekRelative(seconds));
 ipcMain.handle('player:stop', () => mpv?.command(['stop']));
 ipcMain.handle('player:set-audio-track', (_event, id) => mpv?.setAudioTrack(id));
 ipcMain.handle('player:set-subtitle-track', (_event, id) => mpv?.setSubtitleTrack(id));
